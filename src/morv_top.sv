@@ -8,7 +8,8 @@ module morv_top (
     output logic write,
     output logic [3:0] wstrb,
     input logic [31:0] rdata,
-    input logic ready
+    input logic ready,
+    output logic exception
 );
     import rv32_pkg::*;
 
@@ -171,11 +172,20 @@ module morv_top (
                 alu_b_sel = 0;
                 case (funct3)
                     3'b000: alu_op = ADDI;
+                    3'b001: alu_op = SLL;
                     3'b010: alu_op = SLTI;
                     3'b011: alu_op = SLTIU;
                     3'b100: alu_op = XORI;
+                    3'b101: begin
+                        case (funct7)
+                            7'b0: alu_op = SRL;
+                            7'b0100000: alu_op = SRA;
+                            default: alu_op = INVALID;
+                        endcase
+                    end
                     3'b110: alu_op = ORI;
                     3'b111: alu_op = ANDI;
+                    default: alu_op = INVALID;
                 endcase
             end
 
@@ -209,6 +219,21 @@ module morv_top (
                 alu_op = BYPASS;
             end
 
+            SYSTEM: begin
+                alu_a_sel = 0;
+                alu_b_sel = 0;
+                case (funct3)
+                    3'b000: // ECALL, EBREAK
+                        case (imm[11:0])
+                            12'h000: alu_op = INVALID; // ECALL
+                            12'h001: alu_op = INVALID; // EBREAK
+                            default: alu_op = INVALID;
+                        endcase
+                    3'b001: alu_op = NOP; // FENCE
+                    default: alu_op = INVALID;
+                endcase
+            end
+
             default: begin
                 alu_a_sel = 0;
                 alu_b_sel = 0;
@@ -233,10 +258,13 @@ module morv_top (
 
             JALR: alu_result = (alu_a + alu_b) & ~(32'b1);
             BYPASS: alu_result = alu_b;
+            NOP: alu_result = 0;
 
             default: alu_result = 0; // TODO error handling.
         endcase
     end
+
+    assign exception = alu_op == INVALID;
 
     // Write-back stage
     always_comb begin
@@ -251,7 +279,40 @@ module morv_top (
 
             LW: begin
                 xreg_wren = 1;
-                xreg_wdata = rdata;
+                case (funct3)
+                    3'b000: begin // LB
+                        case (alu_result[1:0])
+                            2'b00: xreg_wdata = {{24{rdata[7]}}, rdata[7:0]};
+                            2'b01: xreg_wdata = {{24{rdata[15]}}, rdata[15:8]};
+                            2'b10: xreg_wdata = {{24{rdata[23]}}, rdata[23:16]};
+                            2'b11: xreg_wdata = {{24{rdata[31]}}, rdata[31:24]};
+                        endcase
+                    end
+                    3'b001: begin // LH
+                        case (alu_result[1:0])
+                            2'b00: xreg_wdata = {{16{rdata[15]}}, rdata[15:0]};
+                            2'b10: xreg_wdata = {{16{rdata[31]}}, rdata[31:16]};
+                            default: xreg_wdata = 0; // alignment error
+                        endcase
+                    end
+                    3'b010: xreg_wdata = rdata; // LW
+                    3'b100: begin // LBU
+                        case (alu_result[1:0])
+                            2'b00: xreg_wdata = {24'b0, rdata[7:0]};
+                            2'b01: xreg_wdata = {24'b0, rdata[15:8]};
+                            2'b10: xreg_wdata = {24'b0, rdata[23:16]};
+                            2'b11: xreg_wdata = {24'b0, rdata[31:24]};
+                        endcase
+                    end
+                    3'b101: begin // LHU
+                        case (alu_result[1:0])
+                            2'b00: xreg_wdata = {16'b0, rdata[15:0]};
+                            2'b10: xreg_wdata = {16'b0, rdata[31:16]};
+                            default: xreg_wdata = 0; // alignment error
+                        endcase
+                    end
+                    default: xreg_wdata = 0;
+                endcase
             end
 
             LUI: begin
@@ -269,7 +330,7 @@ module morv_top (
                 xreg_wdata = pc + 4;
             end
 
-            B, SW: xreg_wren = 0;
+            B, SW, SYSTEM: xreg_wren = 0;
             default: xreg_wren = 0;
         endcase
     end
@@ -292,7 +353,12 @@ module morv_top (
                 mem_access_en = 1;
                 write = 1;
                 wdata = rs2_data;
-                wstrb = 4'b1111;
+                case (funct3)
+                    3'b000: wstrb = 4'b0001 << alu_result[1:0]; // SB
+                    3'b001: wstrb = 4'b0011 << alu_result[1:0]; // SH
+                    3'b010: wstrb = 4'b1111 << alu_result[1:0]; // SW
+                    default: wstrb = 4'b0000;
+                endcase
             end
 
             default: begin
@@ -330,7 +396,7 @@ module morv_top (
                             next_pc = pc + 4;
                     end
                     3'b101: begin // BGE
-                        if ($signed(rs1_data) > $signed(rs2_data))
+                        if ($signed(rs1_data) >= $signed(rs2_data))
                             next_pc = alu_result;
                         else
                             next_pc = pc + 4;
@@ -342,11 +408,11 @@ module morv_top (
                             next_pc = pc + 4;
                     end
                     3'b111: begin // BGEU
-                        if (rs1_data > rs2_data)
+                        if (rs1_data >= rs2_data)
                             next_pc = alu_result;
                         else
                             next_pc = pc + 4;
-                    end 
+                    end
                 endcase
             end
             default: next_pc = pc + 4;

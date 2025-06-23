@@ -15,6 +15,8 @@ package rv32i_pkg;
         SW      = 7'b0100011,
         // R-type
         R       = 7'b0110011,
+        // system-type
+        SYSTEM  = 7'b1110011
     } rv32i_opcode;
 
     enum logic [5:0] {
@@ -38,6 +40,7 @@ package rv32i_pkg;
 
         BYPASS,
         JALR,
+        NOP,
         INVALID
     } alu_ops
 endpackage
