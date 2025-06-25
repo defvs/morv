@@ -8,6 +8,7 @@ module morv_standalone_tb;
     logic [3:0] wstrb;
     logic [31:0] rdata;
     logic ready;
+    logic exception;
 
     // Clock/Reset
     initial clk = 1;

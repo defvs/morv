@@ -11,7 +11,7 @@ module morv_top (
     input logic ready,
     output logic exception
 );
-    import rv32_pkg::*;
+    import rv32i_pkg::*;
 
     parameter [31:0] RESET_VECTOR = 32'b0;
 
@@ -20,10 +20,11 @@ module morv_top (
     logic [31:0] ir;
 
     // PC logic
-    wire mem_access_en;
+    logic mem_access_en;
+    logic [31:0] alu_result;
     assign address = mem_access_en ? alu_result : pc;
 
-    wire [31:0] next_pc;
+    logic [31:0] next_pc;
 
     always_ff @(posedge clk) begin
         if (!rst_n)
@@ -37,10 +38,6 @@ module morv_top (
         ir <= ready ? rdata : ir;
     end
 
-    // read instruction logic
-    assign write = 0;
-    assign wstrb = 4'b0000;
-
     // Instruction decode
     wire [6:0] opcode = ir[6:0];
     wire [4:0] rd = ir[11:7];
@@ -48,7 +45,7 @@ module morv_top (
     wire [4:0] rs1 = ir[19:15];
     wire [4:0] rs2 = ir[24:20];
     wire [6:0] funct7 = ir[31:25];
-    wire [31:0] imm;
+    logic [31:0] imm;
 
     // imm assignement
     always_comb begin
@@ -104,9 +101,9 @@ module morv_top (
     wire [31:0] rs2_data;
     assign rs2_data = rs2 == 5'b0 ? 32'b0 : xreg[rs2];
     // Write ports
-    wire [31:0] xreg_wdata;
-    wire [4:0] xreg_rd;
-    wire xreg_wren;
+    logic [31:0] xreg_wdata;
+    logic [4:0] xreg_rd;
+    logic xreg_wren;
     // Write logic
     always_ff @(posedge clk) begin
         if (!rst_n)
@@ -120,15 +117,14 @@ module morv_top (
     // Execute stage
     // ALU
     wire [31:0] alu_a;
-    wire alu_a_sel;
+    logic alu_a_sel;
     assign alu_a = alu_a_sel ? rs1_data : pc;
 
     wire [31:0] alu_b;
-    wire alu_b_sel;
+    logic alu_b_sel;
     assign alu_b = alu_b_sel ? rs2_data : imm;
 
     alu_ops alu_op;
-    wire [31:0] alu_result;
 
     // ALU operator selection
     always_comb begin
@@ -210,7 +206,7 @@ module morv_top (
             JALR: begin
                 alu_a_sel = 1;
                 alu_b_sel = 0;
-                alu_op = JALR;
+                alu_op = ALU_JALR;
             end
 
             LUI: begin
@@ -256,7 +252,7 @@ module morv_top (
             OR, ORI: alu_result = alu_a | alu_b;
             AND, ANDI: alu_result = alu_a & alu_b;
 
-            JALR: alu_result = (alu_a + alu_b) & ~(32'b1);
+            ALU_JALR: alu_result = (alu_a + alu_b) & ~(32'b1);
             BYPASS: alu_result = alu_b;
             NOP: alu_result = 0;
 
@@ -372,7 +368,7 @@ module morv_top (
 
     // next_pc calculation
     always_comb begin
-        next_pc = pc + 4
+        next_pc = pc + 4;
         case (opcode)
             JAL, JALR: next_pc = alu_result;
             B: begin

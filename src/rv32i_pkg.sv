@@ -1,5 +1,5 @@
 package rv32i_pkg;
-    enum logic [6:0] {
+    typedef enum logic [6:0] {
         // U-Type
         LUI     = 7'b0110111,
         AUIPC   = 7'b0010111,
@@ -19,7 +19,7 @@ package rv32i_pkg;
         SYSTEM  = 7'b1110011
     } rv32i_opcode;
 
-    enum logic [5:0] {
+    typedef enum logic [5:0] {
         ADD,
         SUB,
         SLL,
@@ -39,8 +39,8 @@ package rv32i_pkg;
         ANDI,
 
         BYPASS,
-        JALR,
+        ALU_JALR,
         NOP,
         INVALID
-    } alu_ops
+    } alu_ops;
 endpackage

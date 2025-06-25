@@ -1,2 +1,0 @@
-#e1(25Jun2025:13:35:20): source ./xcelium.d/env.d/env.history.25Jun2025_13_35_20
-s1(25Jun2025:13:35:20):  xrun -gui src/morv_top.sv src/rv32_pkg.sv tb/morv_standalone_tb.sv tb/simple_mem.sv 
