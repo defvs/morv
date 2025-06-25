@@ -1,4 +1,4 @@
-RTL_SRC := src/morv_top.sv src/rv32_pkg.sv
+RTL_SRC := src/morv_top.sv src/rv32i_pkg.sv
 TB_SRC := tb/morv_standalone_tb.sv tb/simple_mem.sv
 
 BUILD_DIR := build
