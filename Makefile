@@ -12,10 +12,10 @@ default help:
 
 synth:
 
-sim-gui: XRUN_EXTRA_OPTS += -gui
-sim-gui: sim
+xmsim-gui: XRUN_EXTRA_OPTS += -gui
+xmsim-gui: xmsim
 
-sim: dirs
+xmsim: dirs
 	cd ${BUILD_DIR}; xrun ${XRUN_EXTRA_OPTS} -top morv_standalone_tb $(realpath ${RTL_SRC} ${TB_SRC})
 
 dirs:
