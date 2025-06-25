@@ -1,0 +1,190 @@
+#
+# Simulator
+#
+database require simulator -hints {
+	simulator "xrun -gui -64bit -access +rw -top morv_standalone_tb /work/adtexplore/users/thiriond/current/morv/src/rv32i_pkg.sv /work/adtexplore/users/thiriond/current/morv/src/morv_top.sv /work/adtexplore/users/thiriond/current/morv/tb/simple_mem.sv /work/adtexplore/users/thiriond/current/morv/tb/morv_standalone_tb.sv -ams_lorder XCELIUM -licqueue -input morv_standalone_tb.simvision.tcl"
+}
+#
+# Groups
+#
+catch {group new -name {Memory Bus} -overlay 0}
+catch {group new -name Core -overlay 0}
+catch {group new -name {Group 3} -overlay 0}
+catch {group new -name {Register Bank} -overlay 0}
+catch {group new -name {xregs read} -overlay 0}
+catch {group new -name {xregs write} -overlay 0}
+catch {group new -name {Instruction decode} -overlay 0}
+catch {group new -name ALU -overlay 0}
+group using {Memory Bus}
+group set -overlay 0
+group set -comment {}
+group clear 0 end
+
+group insert \
+    [subst  {simulator::[format {morv_standalone_tb.morv_cpu_inst.address[31:0]}]} ] \
+    [subst  {simulator::[format {morv_standalone_tb.morv_cpu_inst.rdata[31:0]}]} ] \
+    [subst  {simulator::[format {morv_standalone_tb.morv_cpu_inst.ready}]} ] \
+    [subst  {simulator::[format {morv_standalone_tb.morv_cpu_inst.wdata[31:0]}]} ] \
+    [subst  {simulator::[format {morv_standalone_tb.morv_cpu_inst.write}]} ] \
+    [subst  {simulator::[format {morv_standalone_tb.morv_cpu_inst.wstrb[3:0]}]} ]
+group using Core
+group set -overlay 0
+group set -comment {}
+group clear 0 end
+
+group insert \
+    [subst  {simulator::[format {morv_standalone_tb.morv_cpu_inst.pc[31:0]}]} ] \
+    [subst  {simulator::[format {morv_standalone_tb.morv_cpu_inst.ir[31:0]}]} ] \
+    [subst  {simulator::[format {morv_standalone_tb.morv_cpu_inst.next_pc[31:0]}]} ] \
+    [subst  {simulator::[format {morv_standalone_tb.morv_cpu_inst.mem_access_en}]} ] \
+    {Register Bank} \
+    {Instruction decode} \
+    ALU
+group using {Group 3}
+group set -overlay 0
+group set -comment {}
+group clear 0 end
+
+group using {Register Bank}
+group set -overlay 0
+group set -comment {}
+group clear 0 end
+
+group insert \
+    [subst  {simulator::[format {morv_standalone_tb.morv_cpu_inst.xreg[0:31]}]} ] \
+    {xregs read} \
+    {xregs write}
+group using {xregs read}
+group set -overlay 0
+group set -comment {}
+group clear 0 end
+
+group insert \
+    [subst  {simulator::[format {morv_standalone_tb.morv_cpu_inst.rs1[4:0]}]} ] \
+    [subst  {simulator::[format {morv_standalone_tb.morv_cpu_inst.rs1_data[31:0]}]} ] \
+    [subst  {simulator::[format {morv_standalone_tb.morv_cpu_inst.rs2[4:0]}]} ] \
+    [subst  {simulator::[format {morv_standalone_tb.morv_cpu_inst.rs2_data[31:0]}]} ]
+group using {xregs write}
+group set -overlay 0
+group set -comment {}
+group clear 0 end
+
+group insert \
+    [subst  {simulator::[format {morv_standalone_tb.morv_cpu_inst.xreg_wren}]} ] \
+    [subst  {simulator::[format {morv_standalone_tb.morv_cpu_inst.xreg_wdata[31:0]}]} ] \
+    [subst  {simulator::[format {morv_standalone_tb.morv_cpu_inst.xreg_rd[4:0]}]} ]
+group using {Instruction decode}
+group set -overlay 0
+group set -comment {}
+group clear 0 end
+
+group insert \
+    [subst  {simulator::[format {morv_standalone_tb.morv_cpu_inst.opcode[6:0]}]} ] \
+    [subst  {simulator::[format {morv_standalone_tb.morv_cpu_inst.rd[4:0]}]} ] \
+    [subst  {simulator::[format {morv_standalone_tb.morv_cpu_inst.funct3[2:0]}]} ] \
+    [subst  {simulator::[format {morv_standalone_tb.morv_cpu_inst.funct7[6:0]}]} ] \
+    [subst  {simulator::[format {morv_standalone_tb.morv_cpu_inst.rs1[4:0]}]} ] \
+    [subst  {simulator::[format {morv_standalone_tb.morv_cpu_inst.rs2[4:0]}]} ] \
+    [subst  {simulator::[format {morv_standalone_tb.morv_cpu_inst.imm[31:0]}]} ]
+group using ALU
+group set -overlay 0
+group set -comment {}
+group clear 0 end
+
+group insert \
+    [subst  {simulator::[format {morv_standalone_tb.morv_cpu_inst.alu_op[5:0]}]} ] \
+    [subst  {simulator::[format {morv_standalone_tb.morv_cpu_inst.alu_a_sel}]} ] \
+    [subst  {simulator::[format {morv_standalone_tb.morv_cpu_inst.alu_a[31:0]}]} ] \
+    [subst  {simulator::[format {morv_standalone_tb.morv_cpu_inst.alu_b_sel}]} ] \
+    [subst  {simulator::[format {morv_standalone_tb.morv_cpu_inst.alu_b[31:0]}]} ] \
+    [subst  {simulator::[format {morv_standalone_tb.morv_cpu_inst.alu_result[31:0]}]} ]
+
+#
+# Design Browser windows
+#
+if {[catch {window new WatchList -name "Design Browser 1" -geometry 1103x500+761+287}] != ""} {
+    window geometry "Design Browser 1" 1103x500+761+287
+}
+window target "Design Browser 1" on
+browser using {Design Browser 1}
+browser set -scope [subst  {simulator::[format {morv_standalone_tb.morv_cpu_inst}]} ]
+browser set \
+    -showassertions 0 \
+    -showfibers 0 \
+    -showinouts 0 \
+    -showinputs 0 \
+    -showoutputs 0 \
+    -signalsort name
+browser yview see [subst  {simulator::[format {morv_standalone_tb.morv_cpu_inst}]} ]
+browser timecontrol set -lock 0
+
+#
+# Waveform windows
+#
+if {[catch {window new WaveWindow -name "Waveform 1" -geometry 1920x984+0+31}] != ""} {
+    window geometry "Waveform 1" 1920x984+0+31
+}
+window target "Waveform 1" on
+waveform using {Waveform 1}
+waveform sidebar visibility partial
+waveform set \
+    -primarycursor TimeA \
+    -signalnames name \
+    -signalwidth 175 \
+    -units ns \
+    -valuewidth 75
+waveform baseline set -time 0
+
+set id [waveform add -signals [subst  {
+	{simulator::[format {morv_standalone_tb.morv_cpu_inst.rst_n}]}
+	} ]]
+set id [waveform add -signals [subst  {
+	{simulator::[format {morv_standalone_tb.morv_cpu_inst.clk}]}
+	} ]]
+set id [waveform add -signals [subst  {
+	{simulator::[format {morv_standalone_tb.morv_cpu_inst.exception}]}
+	} ]]
+
+set groupId0 [waveform add -groups {{Memory Bus}}]
+waveform hierarchy collapse $groupId0
+
+
+set groupId0 [waveform add -groups Core]
+
+set groupId1 [waveform find -name {Register Bank}]
+
+set groupId2 [waveform find -name {xregs read}]
+
+
+set groupId2 [waveform find -name {xregs write}]
+waveform hierarchy collapse $groupId2
+
+waveform hierarchy collapse $groupId1
+
+
+set groupId1 [waveform find -name {Instruction decode}]
+waveform hierarchy collapse $groupId1
+
+
+set groupId1 [waveform find -name ALU]
+waveform hierarchy collapse $groupId1
+
+waveform hierarchy collapse $groupId0
+
+
+waveform xview limits 0 2000ns
+
+#
+# Waveform Window Links
+#
+
+#
+# Console windows
+#
+console set -windowname Console
+window geometry Console 730x250+261+564
+
+#
+# Layout selection
+#
+
